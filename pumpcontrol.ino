@@ -35,8 +35,10 @@
 #include <MqttClient.h>
 
 
-#define STASSID  "940dm2"
-#define STAPSK   "thisisnewrouter"
+//#define STASSID  "940dm2"
+//#define STAPSK   "thisisnewrouter"
+#define STASSID  "TheShop.build"
+#define STAPSK   "february19"
 
 
 #define LOG_PRINTFLN(fmt, ...)  logfln(fmt, ##__VA_ARGS__)

@@ -34,7 +34,6 @@
 #define MQTT_LOG_ENABLED 1
 #include <MqttClient.h>
 
-
 //#define STASSID  "940dm2"
 //#define STAPSK   "thisisnewrouter"
 #define STASSID  "TheShop.build"
@@ -72,7 +71,11 @@ public:
 };
 
 
-#define SPEED 26
+#define DAC1 26
+#define START_STOP 33
+#define ENABLE 14 
+#define DIRECTION 13
+#define DIRSW 21
 #define DEMO_DURATION 3000
 typedef void (*Demo)(void);
 const int timeZone = -7;  // Pacific Daylight Time (USA)
@@ -291,13 +294,24 @@ void mqttComm(){
     mqtt->yield(30000L);
   }
 }
+bool running = false;
+unsigned int Duration = 10000;
 
 void setup()
 {
+  Serial.begin(115200);
 	pinMode(LED,OUTPUT);
 	digitalWrite(LED,HIGH);
   pinMode(5, OUTPUT); 
-  analogWrite(SPEED,0);
+  pinMode(START_STOP,INPUT_PULLUP);
+  pinMode(DIRSW,INPUT_PULLUP);
+  pinMode(ENABLE,OUTPUT); 
+  pinMode(DIRECTION,OUTPUT);
+  digitalWrite(ENABLE,HIGH);
+  digitalWrite(DIRECTION,HIGH);
+  digitalWrite(START_STOP,HIGH);
+  attachInterrupt(digitalPinToInterrupt(START_STOP), StartStop, RISING);
+  attachInterrupt(digitalPinToInterrupt(DIRSW), dirChange, RISING);
 	Heltec.begin(true /*DisplayEnable Enable*/, false /*LoRa Enable*/, true /*Serial Enable*/);
 
   ui.setTargetFPS(90);
@@ -351,11 +365,50 @@ void setup()
        mqttOptions, *mqttLogger, *mqttSystem, *mqttNetwork, *mqttSendBuffer,
        *mqttRecvBuffer, *mqttMessageHandlers);
 	}
- 
+ running = false;
+}
+
+void setSpeed(int Value){
+  dacWrite(DAC1,Value);
+}
+
+unsigned int startTime = 0;
+void StartStop(){
+  if (running) {
+    digitalWrite(ENABLE, HIGH);
+    running = false;
+  }else{
+    digitalWrite(ENABLE, LOW);
+    startTime = millis(); 
+    running = true;
+  }
+  
+}
+bool forward = false;
+void dirChange(){
+  if (forward) {
+    digitalWrite(DIRECTION,HIGH);
+    forward = false;
+  }else{
+    digitalWrite(DIRECTION, LOW);
+    forward = true;
+  }
+  
 }
 
 void loop()
 {
+  int Value = 255;
+  setSpeed(Value);   
+  if (running) {
+    int time =  millis() - startTime;
+    Serial.println(time);
+    
+    if ( time > Duration){
+      StartStop();
+      Serial.println("Found");
+    }
+  }
 	int remainingTimeBudget = ui.update();
   if (remainingTimeBudget > 0) {
     digitalClockDisplay();
